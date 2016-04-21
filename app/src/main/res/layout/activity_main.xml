@@ -7,14 +7,36 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.aidanas.russianroulette.MainActivity"
+    tools:context=".ui.MainActivity"
     android:background="@drawable/flag">
 
     <TextView
         android:id="@+id/ac_main_tv"
+        android:minLines="4"
         style="@style/MyTextViewStyle"
         android:textSize="@dimen/text_size"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Hello World!" />
+
+    <Button
+        android:id="@+id/ac_main_send_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/ac_main_tv"
+        android:text="Send"/>
+
+    <Button
+        android:id="@+id/ac_main_server_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:text="Server"/>
+
+    <Button
+        android:id="@+id/ac_main_client_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/ac_main_server_btn"
+        android:text="Client"/>
 </RelativeLayout>

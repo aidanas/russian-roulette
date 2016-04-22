@@ -19,11 +19,17 @@
         android:layout_height="wrap_content"
         android:text="Hello World!" />
 
+    <EditText
+        android:id="@+id/ac_main_et"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/ac_main_tv"/>
+
     <Button
         android:id="@+id/ac_main_send_btn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/ac_main_tv"
+        android:layout_below="@id/ac_main_et"
         android:text="Send"/>
 
     <Button

@@ -16,4 +16,6 @@ public class BtMsg implements Serializable{
     public static final int SLAVE_ACK = 10;
     public static final int SLAVE_CONNECTION_FAIL = 11;
     public static final int CONNECTED_SLAVE_SOCKET = 12;
+
+    public static final int BT_MESSAGE_READ = 30;
 }

@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-        mTextView  = (TextView) findViewById(R.id.ac_main_tv);
+        mTextView  = (TextView) findViewById(R.id.ac_main_title_tv);
         mEditText  = (EditText) findViewById(R.id.ac_main_et);
         mServerBtn = (Button) findViewById(R.id.ac_main_server_btn);
         mClientBtn = (Button) findViewById(R.id.ac_main_client_btn);

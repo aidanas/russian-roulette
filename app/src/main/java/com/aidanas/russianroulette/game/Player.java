@@ -41,7 +41,7 @@ public class Player {
 
         @Override
         public int compare(Player lhs, Player rhs) {
-            lhs.getName().compareTo(rhs.getName());
+            return lhs.getName().compareTo(rhs.getName());
         }
     }
 }

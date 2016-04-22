@@ -13,9 +13,21 @@
         <item name="displayOptions">none</item>
     </style>
 
-    <style name="MyTextViewStyle" parent="@android:style/Widget.TextView" >
+    <style name="TitleTextViewStyle" parent="@android:style/Widget.TextView" >
         <item name="android:textColor">@color/colorBlack</item>
+        <item name="android:textSize">@dimen/title_text_size</item>
+    </style>
 
+    <style name="LargeButtonStyle" parent="@android:style/Widget.TextView" >
+        <item name="android:background">@color/colorMainBtnRed</item>
+        <item name="android:layout_margin">@dimen/large_button_margin</item>
+        <item name="android:height">@dimen/large_button_height</item>
+        <item name="android:textSize">@dimen/large_button_text_size</item>
+    </style>
+
+    <style name="SubTitleTextViewStyle">
+        <item name="android:textColor">@color/colorBlack</item>
+        <item name="android:textSize">@dimen/sub_title_text_size</item>
     </style>
 
 </resources>

@@ -30,4 +30,26 @@
         <item name="android:textSize">@dimen/sub_title_text_size</item>
     </style>
 
+    <style name="BigBtnStyle">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/bigBtnHeight</item>
+        <item name="android:background">@color/appBlue</item>
+        <item name="android:textSize">@dimen/bigBtnTextSize</item>
+        <item name="android:textColor">@color/appYellow</item>
+
+    </style>
+
+    <style name="lw_item_style">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:background">@color/appYellow</item>
+    </style>
+
+    <style name="host_list_item_tw_style">
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:textColor">@color/colorBlack</item>
+    </style>
+
 </resources>

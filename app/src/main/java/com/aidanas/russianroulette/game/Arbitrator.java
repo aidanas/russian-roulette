@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Created by: Aidanas
  * Created on: 21/04/2016.
- * <p>
+ *
  * Class to contain the Russian Roulette game logic.
  */
 public class Arbitrator implements BluetoothSocketReceiver{
@@ -22,9 +22,20 @@ public class Arbitrator implements BluetoothSocketReceiver{
     // Tag, mostly used for logging and debug output.
     public static final String TAG = BtMasterThread.class.getSimpleName();
 
+    // Flag to be set for the device acting as a server of the game.
+    private final boolean mIsServer;
+
     // Holds a list of connected sockets. Only server would contains more than one item in it.
     private final List<BluetoothSocket> mConnectedSockets =
             Collections.synchronizedList(new ArrayList<BluetoothSocket>());
+
+    /**
+     * Constructor.
+     * @param isServer - Is the device running as the server of the game?
+     */
+    public Arbitrator(boolean isServer){
+        mIsServer = isServer;
+    }
 
     /**
      * Callback method which is called when connection is established providing a connected

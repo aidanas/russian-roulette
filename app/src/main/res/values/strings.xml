@@ -5,4 +5,8 @@
     <string name="join_game">Join Game</string>
     <string name="russian_roulette">Russian Roulette</string>
     <string name="digital_version">Digital Version</string>
+    <string name="playing">Playing...</string>
+    <string name="i_m_ready">I\'m Ready!</string>
+    <string name="select_a_host">Select a host:</string>
+    <string name="no_bt_dialog_msg">The device appears NOT to have a Bluetooth adapter! The game will only be playable as a single player game!</string>
 </resources>

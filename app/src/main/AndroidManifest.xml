@@ -23,9 +23,18 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".ui.PlayingActivityServer"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:screenOrientation="portrait" />
+        <activity android:name=".ui.PlayingActivityClient"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:screenOrientation="portrait" />
+        <activity android:name=".ui.SelectHostActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:screenOrientation="portrait"/>
+
         <service android:name=".services.GameService" />
 
-        <activity android:name=".ui.PlayingActivity"></activity>
     </application>
 
 </manifest>

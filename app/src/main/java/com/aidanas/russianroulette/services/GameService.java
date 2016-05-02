@@ -21,13 +21,14 @@ import com.aidanas.russianroulette.communication.BtMasterThread;
 import com.aidanas.russianroulette.communication.BtSlaveThread;
 import com.aidanas.russianroulette.game.Arbitrator;
 import com.aidanas.russianroulette.interfaces.BluetoothSocketReceiver;
-import com.aidanas.russianroulette.ui.MainActivity;
+import com.aidanas.russianroulette.ui.PlayingActivityServer;
+import com.aidanas.russianroulette.ui.SelectHostActivity;
 
 import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Created by: Aidanas
+ * Created by: Aidanas Tamasauskas
  * Created on: 22/04/2016.
  * <p>
  * Service will handle communication and Bluetooth sockets away from the lifecycle of activity and
@@ -62,7 +63,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
     // TODO: 22/04/2016 Remove after DEBUGGING is completed!
     private BtConnectedThread mBluetoothConnectedThread;
 
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
@@ -84,19 +84,30 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
                 Thread.currentThread().getName());
 
         Bundle bundle = intent.getExtras();
-        mMessenger = (Messenger) bundle.get(MainActivity.MESSENGER);
+        mMessenger = (Messenger) bundle.get(PlayingActivityServer.MESSENGER);
 
         // Game arbitrator and the communication should only be initiated once.
         if (!isStarted) {
-            mIsServer = bundle.getBoolean(MainActivity.IS_SERVER);
+            mIsServer = bundle.getBoolean(PlayingActivityServer.IS_SERVER);
             isStarted = true;
-//            initArbitrator(mIsServer);
-            initCommunication(mIsServer, mIsServer ? null : bundle.getString(
-                    MainActivity.MASTERS_MAC));
+            initArbitrator(mIsServer);
+            initCommunication(mIsServer, mIsServer ? null :
+                    bundle.getString(SelectHostActivity.HOST_MAC_ADDR));
         }
 
         // Die with the process.
         return START_NOT_STICKY;
+    }
+
+    /**
+     * Method to create and initialise the arbitrator of the game.
+     * @param isServer - Tue if the device is hosting the game.
+     */
+    private void initArbitrator(Boolean isServer) {
+        if (Const.DEBUG) Log.v(TAG, "In initArbitrator(), isServer = " + isServer);
+
+        mArbitrator = new Arbitrator(isServer);
+        
     }
 
     /**
@@ -227,6 +238,9 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
      * reference to this service and communicate with it as necessary by calling its public methods.
      */
     public class ServiceBinder extends Binder {
+
+        // Tag, mostly used for logging and debug output.
+        public final String TAG = ServiceBinder.class.getSimpleName();
 
         public GameService getGameService() {
             if (Const.DEBUG) Log.v(TAG, "In getGameService(), Thread = " +

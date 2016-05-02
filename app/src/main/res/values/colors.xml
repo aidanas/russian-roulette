@@ -6,5 +6,7 @@
     <color name="colorBlack">#000000</color>
     <color name="colorRed">#FF0000</color>
     <color name="colorMainBtnRed">#AA221A</color>
+    <color name="appBlue">#023954</color>
+    <color name="appYellow">#81663F</color>
 
 </resources>

@@ -7,7 +7,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context=".ui.PlayingActivityServer"
+    tools:context=".ui.SelectHostActivity"
     android:background="@drawable/flag">
 
     <LinearLayout
@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:layout_gravity="center"
-            android:text="@string/playing" />
+            android:text="@string/select_a_host" />
 
 
     </LinearLayout>
@@ -32,11 +32,11 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_weight="2"
         android:orientation="vertical">
 
         <ListView
-            android:id="@+id/ac_playing_players_lw"
+            android:id="@+id/ac_select_host_lw"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
@@ -44,18 +44,5 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="bottom">
 
-        <Button
-            android:id="@+id/ac_playing_ready_btn"
-            style="@style/BigBtnStyle"
-            android:text="@string/i_m_ready"/>
-
-
-    </LinearLayout>
 </LinearLayout>

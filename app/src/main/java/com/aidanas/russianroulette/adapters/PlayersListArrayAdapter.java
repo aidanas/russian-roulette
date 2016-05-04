@@ -1,6 +1,6 @@
 package com.aidanas.russianroulette.adapters;
 
-import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -21,7 +21,7 @@ import java.util.List;
  * <p>
  * Custom array adapter to populate a list with Bluetooth device names.
  */
-public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothDevice>{
+public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothSocket>{
 
     // Tag, mostly used for logging output.
     public static final String TAG = PlayersListArrayAdapter.class.getSimpleName();
@@ -30,9 +30,9 @@ public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothDevice>{
      * Constructor.
      * @param context - Context the adapter is running in.
      * @param rowLayout - Layout of the a single row of the ListView.
-     * @param devices - List of Bluetooth device objects. To be populated in the list rows.
+     * @param devices - List of Bluetooth connected sockets objects. To be populated in the list rows.
      */
-    public PlayersListArrayAdapter(Context context, int rowLayout, List<BluetoothDevice> devices){
+    public PlayersListArrayAdapter(Context context, int rowLayout, List<BluetoothSocket> devices){
         super(context, rowLayout, devices);
     }
 
@@ -72,7 +72,7 @@ public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothDevice>{
 
         // Populate the values into the row.
         ViewHolder viewHolder = (ViewHolder) rowView.getTag();
-        viewHolder.nameTw.setText(getItem(position).getName());
+        viewHolder.nameTw.setText(getItem(position).getRemoteDevice().getName());
 
         return rowView;
     }

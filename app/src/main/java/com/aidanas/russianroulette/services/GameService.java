@@ -106,7 +106,7 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
     private void initArbitrator(Boolean isServer) {
         if (Const.DEBUG) Log.v(TAG, "In initArbitrator(), isServer = " + isServer);
 
-        mArbitrator = new Arbitrator(isServer);
+        mArbitrator = new Arbitrator(isServer, mMessenger);
         
     }
 
@@ -223,6 +223,9 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        // Pass the socket to the arbitrator.
+        mArbitrator.receiveSocket(bluetoothSocket);
     }
 
     /***********************************************************************************************
@@ -249,7 +252,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
             return GameService.this;
         }
     }
-
 }
 
 

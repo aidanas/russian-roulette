@@ -1,7 +1,7 @@
 package com.aidanas.russianroulette.ui;
 
 import android.app.Activity;
-import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -21,9 +21,11 @@ import com.aidanas.russianroulette.Const;
 import com.aidanas.russianroulette.R;
 import com.aidanas.russianroulette.adapters.PlayersListArrayAdapter;
 import com.aidanas.russianroulette.communication.BtMsg;
+import com.aidanas.russianroulette.game.Arbitrator;
 import com.aidanas.russianroulette.services.GameService;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by: Aidanas Tamasauskas
@@ -84,7 +86,7 @@ public class PlayingActivityServer extends Activity {
 
         mPlayersLw = (ListView) findViewById(R.id.ac_playing_players_lw);
         mArrayAdapter = new PlayersListArrayAdapter(this, R.layout.player_list_item,
-                new ArrayList<BluetoothDevice>());
+                new ArrayList<BluetoothSocket>());
         mPlayersLw.setAdapter(mArrayAdapter);
 
         startGameService(true);
@@ -125,6 +127,17 @@ public class PlayingActivityServer extends Activity {
         startService(intent);
     }
 
+    /**
+     * Method to update the list of players on UI with the newly provided list.
+     * @param players - List of players.
+     */
+    private void updatePlayerList(List<BluetoothSocket> players) {
+        if (Const.DEBUG) Log.v(TAG, "In updatePlayerList(), players.size() = " + players.size() +
+                ", Thread = " + Thread.currentThread().getName() );
+
+        mArrayAdapter.addAll(players);
+    }
+
     /***********************************************************************************************
      *                                  Inner Classes
      **********************************************************************************************/
@@ -141,7 +154,7 @@ public class PlayingActivityServer extends Activity {
 
         @Override
         public void handleMessage(Message msg) {
-            if (Const.DEBUG) Log.v(TAG, "in handleMessage(), msg.obj = " + msg.obj + "Thread = " +
+            if (Const.DEBUG) Log.v(TAG, "in handleMessage(), msg.obj = " + msg.obj + ", Thread = " +
                     Thread.currentThread().getName());
 
             /*
@@ -151,8 +164,14 @@ public class PlayingActivityServer extends Activity {
                 case BtMsg.BT_MESSAGE_READ:
                     // TODO: 02/05/2016 handle msg!
                     break;
+
+                case Arbitrator.UPDATE_PLAYER_LIST:
+                    updatePlayerList((List<BluetoothSocket>) msg.obj);
+                    break;
+
                 default:
                     super.handleMessage(msg);
+
             }
         }
     }

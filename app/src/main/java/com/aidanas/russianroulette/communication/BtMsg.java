@@ -18,4 +18,11 @@ public class BtMsg implements Serializable{
     public static final int CONNECTED_SLAVE_SOCKET = 12;
 
     public static final int BT_MESSAGE_READ = 30;
+
+    public static final int STC_NEW_PLAYER = 101;
+
+    // Contents of a message passed between players.
+    public int type;
+    public Object payload; // Must be cast to the expected object type upon reception.
+
 }

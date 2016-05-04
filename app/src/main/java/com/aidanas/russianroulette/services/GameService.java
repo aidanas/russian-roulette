@@ -16,7 +16,6 @@ import android.util.Log;
 
 import com.aidanas.russianroulette.Const;
 import com.aidanas.russianroulette.R;
-import com.aidanas.russianroulette.communication.BtConnectedThread;
 import com.aidanas.russianroulette.communication.BtMasterThread;
 import com.aidanas.russianroulette.communication.BtSlaveThread;
 import com.aidanas.russianroulette.game.Arbitrator;
@@ -59,9 +58,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
     // Thread for initiating Bluetooth connections.
     private BtMasterThread mBtMasterThread;
     private BtSlaveThread mBtSlaveThread;
-
-    // TODO: 22/04/2016 Remove after DEBUGGING is completed!
-    private BtConnectedThread mBluetoothConnectedThread;
 
     @Nullable
     @Override
@@ -138,13 +134,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
      *                            Only Android live cycle methods above this point!
      **********************************************************************************************/
 
-    // TODO: 22/04/2016 Remove after DEBUGGING is completed!
-    public void sendMsg (String msg){
-        if (Const.DEBUG) Log.v(TAG, "In sendMsg(), Thread = " + Thread.currentThread().getName());
-
-        mBluetoothConnectedThread.write(msg.getBytes());
-    }
-
     /**
      * Method to initialise and start a Master Bluetooth thread to listen for incoming connections.
      */
@@ -215,14 +204,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
     public void receiveSocket(BluetoothSocket bluetoothSocket) {
         if (Const.DEBUG) Log.v(TAG, "In receiveSocket(), bluetoothSocket = " +
                 bluetoothSocket.getRemoteDevice().getAddress());
-
-        // For every connected socket spawn a new thread for reading data.
-        try {
-            mBluetoothConnectedThread = new BtConnectedThread(bluetoothSocket, mMessenger);
-            mBluetoothConnectedThread.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         // Pass the socket to the arbitrator.
         mArbitrator.receiveSocket(bluetoothSocket);

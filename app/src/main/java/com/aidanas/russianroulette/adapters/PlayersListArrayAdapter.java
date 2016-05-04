@@ -1,6 +1,5 @@
 package com.aidanas.russianroulette.adapters;
 
-import android.bluetooth.BluetoothSocket;
 import android.content.Context;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -12,6 +11,7 @@ import android.widget.TextView;
 
 import com.aidanas.russianroulette.Const;
 import com.aidanas.russianroulette.R;
+import com.aidanas.russianroulette.game.Player;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ import java.util.List;
  * <p>
  * Custom array adapter to populate a list with Bluetooth device names.
  */
-public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothSocket>{
+public class PlayersListArrayAdapter extends ArrayAdapter<Player>{
 
     // Tag, mostly used for logging output.
     public static final String TAG = PlayersListArrayAdapter.class.getSimpleName();
@@ -32,7 +32,7 @@ public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothSocket>{
      * @param rowLayout - Layout of the a single row of the ListView.
      * @param devices - List of Bluetooth connected sockets objects. To be populated in the list rows.
      */
-    public PlayersListArrayAdapter(Context context, int rowLayout, List<BluetoothSocket> devices){
+    public PlayersListArrayAdapter(Context context, int rowLayout, List<Player> devices){
         super(context, rowLayout, devices);
     }
 
@@ -71,8 +71,10 @@ public class PlayersListArrayAdapter extends ArrayAdapter<BluetoothSocket>{
         }
 
         // Populate the values into the row.
+        Player p = getItem(position);
         ViewHolder viewHolder = (ViewHolder) rowView.getTag();
-        viewHolder.nameTw.setText(getItem(position).getRemoteDevice().getName());
+        viewHolder.nameTw.setText(p.getName());
+        viewHolder.readyIv.setVisibility(p.isReady() ? View.VISIBLE : View.INVISIBLE);
 
         return rowView;
     }

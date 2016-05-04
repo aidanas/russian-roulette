@@ -1,17 +1,17 @@
 package com.aidanas.russianroulette.communication;
 
 import android.bluetooth.BluetoothSocket;
+import android.os.Handler;
 import android.os.Message;
-import android.os.Messenger;
-import android.os.RemoteException;
 import android.util.Log;
 
 import com.aidanas.russianroulette.Const;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 
 /**
  * Created by: Aidanas
@@ -31,20 +31,21 @@ public class BtConnectedThread extends Thread{
     private final OutputStream mOutputStream;
     private final BluetoothSocket mBluetoothSocket;
 
-    private final Messenger mMessenger;
+    // Messages received will be passed to this handler for processing.
+    private final Handler mHandler;
 
     /**
      * Constructor.
      * @param bluetoothSocket - A connected Bluetooth socket through which the communication will be
      *                        going.
-     * @param messenger - Messenger to which received data will be passed.
+     * @param handler - Handler to which received data will be passed.
      */
-    public BtConnectedThread(BluetoothSocket bluetoothSocket, Messenger messenger)
+    public BtConnectedThread(BluetoothSocket bluetoothSocket, Handler handler)
             throws IOException {
         mInputStream = bluetoothSocket.getInputStream();
         mOutputStream = bluetoothSocket.getOutputStream();
         mBluetoothSocket = bluetoothSocket;
-        mMessenger = messenger;
+        mHandler = handler;
     }
 
     /**
@@ -53,44 +54,47 @@ public class BtConnectedThread extends Thread{
     public void run() {
         if (Const.DEBUG) Log.v(TAG, "In run(), Thread = " + Thread.currentThread().getName());
 
-        // Buffer to store data from input stream and the data read counter.
-        byte[] inBuffer = new byte[BUFFER_SIZE];
-        int bytesRead;
-
-
         while (true) {
             try {
                 if (Const.DEBUG) Log.v(TAG, "In run(), reading " +
                         mBluetoothSocket.getRemoteDevice().getAddress());
 
-                bytesRead = mInputStream.read(inBuffer);
+                // We expecting to read objects from the stream.
+                ObjectInputStream ois = new ObjectInputStream(mInputStream);
+                BtMsg btMsg = (BtMsg) ois.readObject();
+                passToHandler(btMsg);
 
-                // TODO: 22/04/2016 Remove after DEBUGGING is completed!
-                if (Const.DEBUG) Log.v(TAG, "In run(), mInputStream.read() returned with " +
-                        bytesRead + " bytes read.");
-
-                passToMessenger(BtMsg.BT_MESSAGE_READ, bytesRead, -1, inBuffer);
             } catch (IOException e) {
                 break;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    /* Call this from the main activity to send data to the remote device */
-    public void write(byte[] bytes) {
+    /**
+     * Method to send date to the remote device.
+     * @param btmsg - Message to be written to the socket.
+     */
+    public void write(BtMsg btmsg) {
         if (Const.DEBUG) Log.v(TAG, "In write(), writing to: " +
                 mBluetoothSocket.getRemoteDevice().getAddress() +
-                ", bytes = " + Arrays.toString(bytes));
+                ", bytes = " + btmsg.type);
 
         try {
-            mOutputStream.write(bytes);
+            ObjectOutputStream oos = new ObjectOutputStream(mOutputStream);
+            oos.writeObject(btmsg);
+
+//            mOutputStream.write(bytes);
             mOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    /* Call this from the main activity to shutdown the connection */
+    /**
+     * Method to close the connection and terminate the thread.
+     */
     public void cancel() {
         try {
             mBluetoothSocket.close();
@@ -98,26 +102,25 @@ public class BtConnectedThread extends Thread{
     }
 
     /**
-     * Method to construct a message form the passed parameters and post them to the messenger.
-     * @param what - Message type.
-     * @param arg1 - Argument for message arg1 field.
-     * @param arg2 - Argument for message arg2 field.
-     * @param obj  - Object to be passed to the main thread.
+     * Method to construct a message form the passed parameters and post them to the Arbitrators'
+     * handler.
+     * @param btMsg  - Object to be passed to the main thread.
      */
-    private void passToMessenger(int what, int arg1, int arg2, Object obj) {
-        if (Const.DEBUG) Log.v(TAG, "In passToMessenger(), dispatching msg.what = " + what +
-                " , obj = " + new String((byte[]) obj));
+    private void passToHandler(BtMsg btMsg) {
+        if (Const.DEBUG) Log.v(TAG, "In passToHandler(), btMsg.type = " + btMsg.type +
+                ", Thread = " + Thread.currentThread().getName());
 
         Message msg = Message.obtain();
-        msg.what = what;
-        msg.arg1 = arg1;
-        msg.arg2 = arg2;
-        msg.obj = obj;
+        msg.what = btMsg.type;
+        msg.obj  = btMsg.payload;
+        mHandler.sendMessage(msg);
+    }
 
-        try {
-            mMessenger.send(msg);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+    /**
+     * Method ot obtain the socket to which this thread is assisted with.
+     * @return - Socket used by this thread.
+     */
+    public BluetoothSocket getBluetoothSocket() {
+        return mBluetoothSocket;
     }
 }

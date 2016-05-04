@@ -1,5 +1,6 @@
 package com.aidanas.russianroulette.game;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 /**
@@ -8,18 +9,22 @@ import java.util.Comparator;
  *
  * Class to model a single player in the game. It will be used by the Arbitrator.
  */
-public class Player {
+public class Player implements Serializable{
 
     // Must be unique among players.
     private final String mName;
+
+    private final String mAddress;
+
+    private boolean mIsReady = false;
 
     /**
      * Constructor
      * @param name - Name of the player.
      */
-    public Player(String name){
+    public Player(String name, String address){
         mName = name;
-
+        mAddress = address;
     }
 
     /***********************************************************************************************
@@ -28,6 +33,18 @@ public class Player {
 
     public String getName() {
         return mName;
+    }
+
+    public String getAddress(){
+        return mAddress;
+    }
+
+    public boolean isReady(){
+        return mIsReady;
+    }
+
+    public void setReady(boolean isReady){
+        mIsReady = isReady;
     }
 
     /***********************************************************************************************

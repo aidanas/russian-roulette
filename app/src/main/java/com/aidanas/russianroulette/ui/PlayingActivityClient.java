@@ -1,7 +1,6 @@
 package com.aidanas.russianroulette.ui;
 
 import android.app.Activity;
-import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -22,6 +21,7 @@ import com.aidanas.russianroulette.R;
 import com.aidanas.russianroulette.adapters.PlayersListArrayAdapter;
 import com.aidanas.russianroulette.communication.BtMsg;
 import com.aidanas.russianroulette.game.Arbitrator;
+import com.aidanas.russianroulette.game.Player;
 import com.aidanas.russianroulette.services.GameService;
 
 import java.util.ArrayList;
@@ -89,7 +89,7 @@ public class PlayingActivityClient extends Activity {
 
         mPlayersLw = (ListView) findViewById(R.id.ac_playing_players_lw);
         mArrayAdapter = new PlayersListArrayAdapter(this, R.layout.player_list_item,
-                new ArrayList<BluetoothSocket>());
+                new ArrayList<Player>());
         mPlayersLw.setAdapter(mArrayAdapter);
 
         startGameService(false);
@@ -158,7 +158,7 @@ public class PlayingActivityClient extends Activity {
                     break;
 
                 case Arbitrator.UPDATE_PLAYER_LIST:
-                    updatePlayerList((List<BluetoothSocket>) msg.obj);
+                    updatePlayerList((List<Player>) msg.obj);
                     break;
                 default:
                     super.handleMessage(msg);
@@ -170,10 +170,11 @@ public class PlayingActivityClient extends Activity {
      * Method to update the list of players on UI with the newly provided list.
      * @param players - List of players.
      */
-    private void updatePlayerList(List<BluetoothSocket> players) {
+    private void updatePlayerList(List<Player> players) {
         if (Const.DEBUG) Log.v(TAG, "In updatePlayerList(), players.size() = " + players.size() +
             ", Thread = " + Thread.currentThread().getName() );
 
+        mArrayAdapter.clear();
         mArrayAdapter.addAll(players);
     }
 

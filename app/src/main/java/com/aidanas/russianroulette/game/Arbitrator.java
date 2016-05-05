@@ -218,12 +218,37 @@ public class Arbitrator implements BluetoothSocketReceiver{
 
     /**
      * Method to notify all clients that one of the players changed their status to 'ready'.
-     * @param p - Player who has changed their status to 'Ready'
+     * @param mac - Player who has changed their status to 'Ready'
      */
-    private void notifyClientsPlayerReady(Player p) {
-        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReady(), player = " + p.getName() +
+    private void notifyClientsPlayerReady(String  mac) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReady(), player = " + mac +
                 ", Thread = " + Thread.currentThread().getName());
-        // TODO: 05/05/2016 Continue from here. Just copy stuff from above method.
+
+        for (BtConnectedThread t: mConnectedThreadMap.values()) {
+            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
+            if (!addr.equals(mac)){ // TODO: 05/05/2016 Implement get playre by mac method.
+                BtMsg btmsg = new BtMsg();
+                btmsg.type = BtMsg.STC_PLAYER_READY;
+                btmsg.payload = mac;
+                t.write(btmsg);
+            }
+        }
+    }
+
+    /**
+     * Method to mark a player with a given mac address as being 'ready'.
+     * @param sendersMAC - Mac address of the player.
+     */
+    private void markPlayerReady(String sendersMAC) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerReady(), sendersMAC = " + sendersMAC +
+                ", Thread = " + Thread.currentThread().getName());
+
+        for (Player p : mPlayersList) {
+            if (p.getAddress().equals((sendersMAC))){
+                p.setReady(true);
+                updateUIPlayerList();
+            }
+        }
     }
 
     /**
@@ -355,16 +380,18 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     ", msg.obj = " + inputMessage.obj + ", Thread = " +
                     Thread.currentThread().getName());
 
+            BtMsg btMsg = (BtMsg) inputMessage.obj;
+
             // Switch on the type of the BtMsg.
             switch (inputMessage.what){
 
                 case BtMsg.STC_NEW_PLAYER:
-                    mPlayersList.add((Player)inputMessage.obj);
+                    mPlayersList.add((Player)btMsg.payload);
                     updateUIPlayerList();
                     break;
 
                 case BtMsg.STC_PLAYERS_LIST:
-                    List<Player> players = (List<Player>) inputMessage.obj;
+                    List<Player> players = (List<Player>) btMsg.payload;
                     updatePlayersList(players);
                     updateUIPlayerList();
                     break;
@@ -374,22 +401,20 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     updateUIPlayerList();
                     break;
 
-                case BtMsg.CTS_CLIENT_READY:
-                    String playersMAC = ((BtMsg)inputMessage.obj).srcMAC;
-                    for (Player p : mPlayersList) {
-                        if (p.getAddress().equals((playersMAC))){
-                            p.setReady(true);
-                            updateUIPlayerList();
-                        }
-                    }
-                    notifyClientsPlayerReady();
+                case BtMsg.STC_PLAYER_READY:
+                    markPlayerReady(btMsg.srcMAC);
+                    break;
 
+                case BtMsg.CTS_CLIENT_READY:
+//                    BtMsg btMsg = (BtMsg)inputMessage.obj;
+//                    String srcMac = btMsg.srcMAC;
+                    markPlayerReady(btMsg.srcMAC);
+                    notifyClientsPlayerReady(btMsg.srcMAC);
+                    break;
 
                 default:
                     super.handleMessage(inputMessage);
             }
         }
-
     }
-
 }

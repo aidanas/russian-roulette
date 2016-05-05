@@ -23,6 +23,7 @@ public class BtMsg implements Serializable{
     public static final int STC_NEW_PLAYER   = 501;
     public static final int STC_PLAYERS_LIST = 502;
     public static final int STC_SERVER_READY = 503;
+    public static final int STC_PLAYER_READY = 504;
 
     // Client To Server message types.
     public static final int CTS_CLIENT_READY = 603;

@@ -113,7 +113,7 @@ public class BtConnectedThread extends Thread{
 
         Message msg = Message.obtain();
         msg.what = btMsg.type;
-        msg.obj  = btMsg.payload;
+        msg.obj  = btMsg;
         mHandler.sendMessage(msg);
     }
 

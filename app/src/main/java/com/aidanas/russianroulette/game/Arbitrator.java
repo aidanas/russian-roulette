@@ -44,6 +44,15 @@ public class Arbitrator implements BluetoothSocketReceiver{
     // Flag to be set for the device acting as a server of the game.
     private final boolean mIsServer;
 
+    /*
+     * Flag indicating that the current device is ready.
+     * Volatile as written and read from distinct threads.
+     */
+    private volatile boolean mIsReady = false;
+
+    // Players of interest.
+    private Player mMasterPlayer;
+
     // To communicate with activity.
     private final Messenger mMessenger;
 
@@ -55,7 +64,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
     private final Map<String, BtConnectedThread> mConnectedThreadMap = new HashMap<>();
 
     // Players currently in the game.
-    private final List<Player> playersList = new ArrayList<>();
+    private final List<Player> mPlayersList = new ArrayList<>();
 
     /*
      * Looper thread and its handler. This will provide a separate thread which the communication
@@ -73,10 +82,70 @@ public class Arbitrator implements BluetoothSocketReceiver{
         mMessenger = messenger;
 
         // Setup the looper for JobCoordinator. It is going to be the main thread coordinating work.
-        mHandlerThread = new HandlerThread("JC Handler Thread");
+        mHandlerThread = new HandlerThread("Arbitrators' Handler Thread");
         mHandlerThread.start();
         mHandler = new ArbitratorHandler(mHandlerThread.getLooper()); // TODO: Disable on termination
     }
+
+    /**
+     * Method to mark current device as ready. It makes sure the processing get done on a separate
+     * from UI thread.
+     */
+    public void readyUp() {
+        if (Const.DEBUG) Log.v(TAG, "In readyUp(), Thread = " + Thread.currentThread().getName());
+
+        // Mrk this player as 'ready'.
+        mIsReady = true;
+
+        // Release the calling thread by delegating further processing to the handlers' thread.
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In run(), Thread = " +
+                        Thread.currentThread().getName());
+
+                // Send 'server ready' bluetooth message to all devices in the game.
+                for (BtConnectedThread t: mConnectedThreadMap.values()) {
+                    BtMsg m = new BtMsg();
+                    m.type = mIsServer ? BtMsg.STC_SERVER_READY : BtMsg.CTS_CLIENT_READY;
+                    t.write(m);
+                }
+
+                // Is it time to spin the gun yet?
+                if (mIsServer && allReady()){
+                    playGame();
+                }
+            }
+        });
+    }
+
+    /**
+     * Utility method to check if all players are in the 'ready' state.
+     * @return - True if all players are ready, false otherwise.
+     */
+    private boolean allReady() {
+        if (Const.DEBUG) Log.v(TAG, "In allReady(), Thread = " +
+                Thread.currentThread().getName());
+
+        // Return false if any of the players are not ready yet.
+        for (Player p: mPlayersList) {
+            if (!p.isReady()){
+                return false;
+            }
+        }
+
+        // True if all and this player are ready.
+        return mIsReady;
+    }
+
+    /**
+     * This method contains the game logic.
+     */
+    private void playGame() {
+        if (Const.DEBUG) Log.v(TAG, "In allReady(), Thread = " +
+                Thread.currentThread().getName());
+    }
+
 
     /**
      * Method to process a newly come device.
@@ -89,7 +158,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
         if (mIsServer){
             mConnectedSockets.add(bluetoothSocket);
             Player p = playersFromSocket(bluetoothSocket);
-            playersList.add(p);
+            mPlayersList.add(p);
             updateUIPlayerList();
             notifyClientsNewPlayer(p);
             notifyNewPlayerCurrentAboutPlayers(p);
@@ -105,7 +174,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
                 p.getName());
 
         // List should contain all but the receiving players.
-        List<Player> players = new ArrayList<>(playersList);
+        List<Player> players = new ArrayList<>(mPlayersList);
         if (!players.remove(p)){
             throw new RuntimeException("Player list could not be modified!");
         }
@@ -148,6 +217,16 @@ public class Arbitrator implements BluetoothSocketReceiver{
     }
 
     /**
+     * Method to notify all clients that one of the players changed their status to 'ready'.
+     * @param p - Player who has changed their status to 'Ready'
+     */
+    private void notifyClientsPlayerReady(Player p) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReady(), player = " + p.getName() +
+                ", Thread = " + Thread.currentThread().getName());
+        // TODO: 05/05/2016 Continue from here. Just copy stuff from above method.
+    }
+
+    /**
      * Method to update player list on the UI.
      */
     private void updateUIPlayerList() {
@@ -155,12 +234,24 @@ public class Arbitrator implements BluetoothSocketReceiver{
 
         Message m = Message.obtain();
         m.what    = UPDATE_PLAYER_LIST;
-        m.obj     = playersList;
+        m.obj     = mPlayersList;
         try {
             mMessenger.send(m);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Method to update the current list of players with the new one. Method takes care to preserve
+     * the master and eliminate duplicates. This gets called when a client joins the server only
+     * once.
+     * @param players - List of currently playing users.
+     */
+    private void updatePlayersList(List<Player> players) {
+        if (Const.DEBUG) Log.v(TAG, "In updatePlayersList(), players.size() = " + players.size());
+
+        mPlayersList.addAll(players);
     }
 
     /**
@@ -223,12 +314,12 @@ public class Arbitrator implements BluetoothSocketReceiver{
 
         /*
          * Server should inform others about the new player. Client just adds the socket as a
-         * player.
+         * player saving a reference to the player as 'MasterPlayer'.
          */
         if (mIsServer){
             newPlayer(bluetoothSocket);
         } else {
-            playersList.add(playersFromSocket(bluetoothSocket));
+            mPlayersList.add(mMasterPlayer = playersFromSocket(bluetoothSocket));
             updateUIPlayerList();
         }
     }
@@ -237,6 +328,11 @@ public class Arbitrator implements BluetoothSocketReceiver{
      *                                  Inner Classes
      **********************************************************************************************/
 
+    /**
+     * Handler class. The purpose of this class is so that other Threads could pass messages and
+     * runnable objects to the arbitrator's tread. it allows the UI thread to return quickly and
+     * communication to be handled by blocking calls.
+     */
     private class ArbitratorHandler extends Handler {
 
         // Tag, mostly used for logging output.
@@ -249,7 +345,6 @@ public class Arbitrator implements BluetoothSocketReceiver{
         public ArbitratorHandler(Looper looper){
             super(looper);
         }
-
         /**
          * Method processes the messages posted onto this handler.
          * @param inputMessage - Message received. Fields of interest : 'what' and 'obj'.
@@ -257,14 +352,14 @@ public class Arbitrator implements BluetoothSocketReceiver{
         @Override
         public void handleMessage(Message inputMessage){
             if (Const.DEBUG) Log.v(TAG, "In handleMessage(), msg.what = " + inputMessage.what +
-                    "msg.obj = " + inputMessage.obj + ", Thread = " +
+                    ", msg.obj = " + inputMessage.obj + ", Thread = " +
                     Thread.currentThread().getName());
 
             // Switch on the type of the BtMsg.
             switch (inputMessage.what){
 
                 case BtMsg.STC_NEW_PLAYER:
-                    playersList.add((Player)inputMessage.obj);
+                    mPlayersList.add((Player)inputMessage.obj);
                     updateUIPlayerList();
                     break;
 
@@ -272,21 +367,29 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     List<Player> players = (List<Player>) inputMessage.obj;
                     updatePlayersList(players);
                     updateUIPlayerList();
+                    break;
+
+                case BtMsg.STC_SERVER_READY:
+                    mMasterPlayer.setReady(true);
+                    updateUIPlayerList();
+                    break;
+
+                case BtMsg.CTS_CLIENT_READY:
+                    String playersMAC = ((BtMsg)inputMessage.obj).srcMAC;
+                    for (Player p : mPlayersList) {
+                        if (p.getAddress().equals((playersMAC))){
+                            p.setReady(true);
+                            updateUIPlayerList();
+                        }
+                    }
+                    notifyClientsPlayerReady();
+
+
                 default:
                     super.handleMessage(inputMessage);
             }
         }
+
     }
 
-    /**
-     * Method to update the current list of players with the new one. Method takes care to preserve
-     * the master and eliminate duplicates. This gets called when a client joins the server only
-     * once.
-     * @param players - List of currently playing users.
-     */
-    private void updatePlayersList(List<Player> players) {
-        if (Const.DEBUG) Log.v(TAG, "In updatePlayersList(), players.size() = " + players.size());
-
-        playersList.addAll(players);
-    }
 }

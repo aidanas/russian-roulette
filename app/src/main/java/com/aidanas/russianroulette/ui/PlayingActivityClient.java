@@ -14,7 +14,9 @@ import android.os.Messenger;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.aidanas.russianroulette.Const;
 import com.aidanas.russianroulette.R;
@@ -59,6 +61,8 @@ public class PlayingActivityClient extends Activity {
     // Views
     private ListView mPlayersLw;
     private Button mReadyBtn;
+    private ImageView mGuyIv;
+    private TextView mTitleTv;
 
     // List adapter
     private PlayersListArrayAdapter mArrayAdapter;
@@ -76,14 +80,25 @@ public class PlayingActivityClient extends Activity {
         // Get the mac address of the hosting device.
         mastersMac = getIntent().getExtras().getString(SelectHostActivity.HOST_MAC_ADDR);
 
-        mReadyBtn  = (Button) findViewById(R.id.ac_playing_ready_btn);
+        mTitleTv  = (TextView) findViewById(R.id.ac_playing_title_tv);
+        mReadyBtn = (Button) findViewById(R.id.ac_playing_ready_btn);
+        mGuyIv    = (ImageView) findViewById(R.id.ac_playing_guy_iv);
+
+        /*
+         * When "I'm Ready" is pressed mark the players as ready. This involves notifying the
+         * service so it can take appropriate action depending on whether the device is a host or
+         * not.
+         */
         mReadyBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Const.DEBUG) Log.v(TAG, "In onClick()");
+                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In onClick()");
 
-                // TODO: 02/05/2016 Implement this!
-
+                // Hide the button and display the image...
+                mReadyBtn.setVisibility(View.GONE);
+                mGuyIv.setVisibility(View.VISIBLE);
+                mTitleTv.setText(getString(R.string.waiting_for_others));
+                mGameService.readyUp();
             }
         });
 
@@ -193,15 +208,16 @@ public class PlayingActivityClient extends Activity {
         public void onServiceConnected(ComponentName className, IBinder service) {
             if (Const.DEBUG) Log.v(TAG, "In onServiceConnected(), className = " + className);
 
+            // Extract and save the reference to the service. Enable 'I'm Ready' button.
             GameService.ServiceBinder binder = (GameService.ServiceBinder) service;
             mGameService = binder.getGameService();
             mBound = true;
+            mReadyBtn.setEnabled(true);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
             if (Const.DEBUG) Log.v(TAG, "In onServiceDisconnected()");
-
             mBound = false;
         }
     }

@@ -19,11 +19,18 @@ public class BtMsg implements Serializable{
 
     public static final int BT_MESSAGE_READ = 30;
 
-    public static final int STC_NEW_PLAYER   = 101;
-    public static final int STC_PLAYERS_LIST = 102;
+    // Server To Client message types.
+    public static final int STC_NEW_PLAYER   = 501;
+    public static final int STC_PLAYERS_LIST = 502;
+    public static final int STC_SERVER_READY = 503;
+
+    // Client To Server message types.
+    public static final int CTS_CLIENT_READY = 603;
 
     // Contents of a message passed between players.
     public int type;
     public Object payload; // Must be cast to the expected object type upon reception.
+
+    public String srcMAC;
 
 }

@@ -95,6 +95,27 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
         return START_NOT_STICKY;
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (Const.DEBUG) Log.v(TAG, "In onDestroy(),Thread = " + Thread.currentThread().getName());
+
+    }
+
+    /***********************************************************************************************
+     *                            Only Android live cycle methods above this point!
+     **********************************************************************************************/
+
+    /**
+     * This gets called by an activity when user chicks 'I'm Ready' button. Method simply delegates
+     * the notification to the Arbitrator.
+     */
+    public void readyUp() {
+        if (Const.DEBUG) Log.v(TAG, "In readyUp(), Thread = " + Thread.currentThread().getName());
+
+        mArbitrator.readyUp();
+    }
+
     /**
      * Method to create and initialise the arbitrator of the game.
      * @param isServer - Tue if the device is hosting the game.
@@ -103,7 +124,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
         if (Const.DEBUG) Log.v(TAG, "In initArbitrator(), isServer = " + isServer);
 
         mArbitrator = new Arbitrator(isServer, mMessenger);
-        
     }
 
     /**
@@ -122,17 +142,6 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
             startBtClient(mBluetoothAdapter.getRemoteDevice(mastersMacAddress));
         }
     }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (Const.DEBUG) Log.v(TAG, "In onDestroy(),Thread = " + Thread.currentThread().getName());
-
-    }
-
-    /***********************************************************************************************
-     *                            Only Android live cycle methods above this point!
-     **********************************************************************************************/
 
     /**
      * Method to initialise and start a Master Bluetooth thread to listen for incoming connections.

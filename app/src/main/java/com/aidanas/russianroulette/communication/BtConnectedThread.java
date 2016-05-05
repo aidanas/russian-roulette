@@ -84,8 +84,6 @@ public class BtConnectedThread extends Thread{
         try {
             ObjectOutputStream oos = new ObjectOutputStream(mOutputStream);
             oos.writeObject(btmsg);
-
-//            mOutputStream.write(bytes);
             mOutputStream.flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -109,6 +107,9 @@ public class BtConnectedThread extends Thread{
     private void passToHandler(BtMsg btMsg) {
         if (Const.DEBUG) Log.v(TAG, "In passToHandler(), btMsg.type = " + btMsg.type +
                 ", Thread = " + Thread.currentThread().getName());
+
+        // Include senders address in the message.
+        btMsg.srcMAC = mBluetoothSocket.getRemoteDevice().getAddress();
 
         Message msg = Message.obtain();
         msg.what = btMsg.type;

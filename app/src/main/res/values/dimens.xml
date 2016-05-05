@@ -9,6 +9,6 @@
     <dimen name="sub_title_text_size">18sp</dimen>
     <dimen name="bigBtnHeight">120dp</dimen>
     <dimen name="bigBtnTextSize">30sp</dimen>
-
+    <dimen name="players_list_heading_text_size">25sp</dimen>
 
 </resources>

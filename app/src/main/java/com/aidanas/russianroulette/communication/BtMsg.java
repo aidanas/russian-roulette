@@ -19,7 +19,8 @@ public class BtMsg implements Serializable{
 
     public static final int BT_MESSAGE_READ = 30;
 
-    public static final int STC_NEW_PLAYER = 101;
+    public static final int STC_NEW_PLAYER   = 101;
+    public static final int STC_PLAYERS_LIST = 102;
 
     // Contents of a message passed between players.
     public int type;

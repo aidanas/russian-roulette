@@ -24,7 +24,9 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by: Aidanas
@@ -49,8 +51,8 @@ public class Arbitrator implements BluetoothSocketReceiver{
     private final List<BluetoothSocket> mConnectedSockets =
             Collections.synchronizedList(new ArrayList<BluetoothSocket>());
 
-    // Incoming messages will  be processed by thread kept in this list.
-    private final List<BtConnectedThread> mConnectedThreads = new ArrayList<>();
+    // Incoming messages will  be processed by thread kept in this map.
+    private final Map<String, BtConnectedThread> mConnectedThreadMap = new HashMap<>();
 
     // Players currently in the game.
     private final List<Player> playersList = new ArrayList<>();
@@ -90,7 +92,29 @@ public class Arbitrator implements BluetoothSocketReceiver{
             playersList.add(p);
             updateUIPlayerList();
             notifyClientsNewPlayer(p);
+            notifyNewPlayerCurrentAboutPlayers(p);
         }
+    }
+
+    /**
+     * Method to send a list of current players to the newly arrived player.
+     * @param p - Newly arrived player which should be provides with a list of current players.
+     */
+    private void notifyNewPlayerCurrentAboutPlayers(Player p) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyNewPlayerCurrentAboutPlayers(), player = " +
+                p.getName());
+
+        // List should contain all but the receiving players.
+        List<Player> players = new ArrayList<>(playersList);
+        if (!players.remove(p)){
+            throw new RuntimeException("Player list could not be modified!");
+        }
+
+        // Construct and send the message.
+        BtMsg btMsg = new BtMsg();
+        btMsg.type = BtMsg.STC_PLAYERS_LIST;
+        btMsg.payload = players;
+        mConnectedThreadMap.get(p.getAddress()).write(btMsg);
     }
 
     /**
@@ -112,7 +136,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
     private void notifyClientsNewPlayer(Player player) {
         if (Const.DEBUG) Log.v(TAG, "In notifyClientsNewPlayer(), player = " + player.getName());
 
-        for (BtConnectedThread t: mConnectedThreads) {
+        for (BtConnectedThread t: mConnectedThreadMap.values()) {
             String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
             if (!addr.equals(player.getAddress())){
                 BtMsg btmsg = new BtMsg();
@@ -192,7 +216,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
         try {
             BtConnectedThread t = new BtConnectedThread(bluetoothSocket, mHandler);
             t.start();
-            mConnectedThreads.add(t);
+            mConnectedThreadMap.put(bluetoothSocket.getRemoteDevice().getAddress(), t);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -244,10 +268,25 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     updateUIPlayerList();
                     break;
 
+                case BtMsg.STC_PLAYERS_LIST:
+                    List<Player> players = (List<Player>) inputMessage.obj;
+                    updatePlayersList(players);
+                    updateUIPlayerList();
                 default:
                     super.handleMessage(inputMessage);
             }
         }
     }
 
+    /**
+     * Method to update the current list of players with the new one. Method takes care to preserve
+     * the master and eliminate duplicates. This gets called when a client joins the server only
+     * once.
+     * @param players - List of currently playing users.
+     */
+    private void updatePlayersList(List<Player> players) {
+        if (Const.DEBUG) Log.v(TAG, "In updatePlayersList(), players.size() = " + players.size());
+
+        playersList.addAll(players);
+    }
 }

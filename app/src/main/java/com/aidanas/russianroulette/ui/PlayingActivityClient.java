@@ -112,7 +112,7 @@ public class PlayingActivityClient extends Activity {
             public void onClick(View v) {
                 if (Const.DEBUG) Log.v(TAG+"[ANON]", "In onClick() mAnotherBtn.");
 
-                // TODO: 06/05/2016 to be specified.
+                resetPlayer();
             }
         });
 
@@ -129,6 +129,18 @@ public class PlayingActivityClient extends Activity {
     /***********************************************************************************************
      *                        Only Android Lifecycle Methods Above
      **********************************************************************************************/
+
+    /**
+     * Method to make the player 'ready' for another round of game.
+     */
+    private void resetPlayer() {
+        if (Const.DEBUG) Log.v(TAG, "In resetPlayer()");
+
+        mTitleTv.setText(R.string.get_ready);
+        mAnotherBtn.setVisibility(View.GONE);
+        mReadyBtn.setVisibility(View.VISIBLE);
+        mGameService.reset();
+    }
 
     /**
      * Method to bind to a service.
@@ -191,6 +203,11 @@ public class PlayingActivityClient extends Activity {
                 case Arbitrator.MSG_UI_ALL_READY:
                     mTitleTv.setText(R.string.playing);
                     break;
+
+                case Arbitrator.MSG_UI_ALIVE:
+                    mTitleTv.setText(R.string.click);
+                    mGuyIv.setVisibility(View.GONE);
+                    mAnotherBtn.setVisibility(View.VISIBLE);
 
                 default:
                     super.handleMessage(msg);

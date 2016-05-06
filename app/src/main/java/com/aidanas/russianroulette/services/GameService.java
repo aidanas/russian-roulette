@@ -117,6 +117,16 @@ public class GameService extends Service  implements BluetoothSocketReceiver {
     }
 
     /**
+     * Method called by activity after the user indicates that their want to play another round of
+     * the game. Delegates the intent to the Arbitrator object.
+     */
+    public void reset() {
+        if (Const.DEBUG) Log.v(TAG, "In reset(), Thread = " + Thread.currentThread().getName());
+
+        mArbitrator.reset();
+    }
+
+    /**
      * Method to create and initialise the arbitrator of the game.
      * @param isServer - Tue if the device is hosting the game.
      */

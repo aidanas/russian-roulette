@@ -17,7 +17,7 @@ public class Player implements Serializable{
 
     private final String mAddress;
 
-    private State mState = State.NOT_READY;
+    private State mState = State.RESET;
 
     /**
      * Constructor
@@ -49,7 +49,7 @@ public class Player implements Serializable{
     }
 
     public void setReady(){
-        if (!(mState == State.NOT_READY)){
+        if (!(mState == State.RESET)){
             throw new IllegalStateException("Players can transition to READY state only from " +
                     "READY state!");
         }
@@ -62,6 +62,14 @@ public class Player implements Serializable{
                     "READY state!");
         }
         mState = State.ALIVE;
+    }
+
+    public void setReset() {
+        if (!(mState == State.ALIVE)){
+            throw new IllegalStateException("Players can transition to RESET state only from " +
+                    "ALIVE state!");
+        }
+        mState = State.RESET;
     }
 
     /***********************************************************************************************
@@ -83,7 +91,7 @@ public class Player implements Serializable{
      * Possible states of a player.
      */
     public enum State{
-        NOT_READY,
+        RESET,
         READY,
         ALIVE,
         DEAD,

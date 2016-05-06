@@ -18,7 +18,7 @@ public class Gun {
     public static final String TAG = Gun.class.getSimpleName();
 
     // How many bullets can this gun hold?
-    private int mCapacity = 6;
+    private final int mCapacity;
 
     // Number of bullets loaded.
     private int mBulletsLoaded;

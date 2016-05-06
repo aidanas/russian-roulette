@@ -24,10 +24,13 @@ public class BtMsg implements Serializable{
     public static final int STC_PLAYER_READY = 504;
     public static final int STC_SERVER_ALIVE = 510;
     public static final int STC_PLAYER_ALIVE = 511;
+    public static final int STC_SERVER_RESET = 520;
+    public static final int STC_PLAYER_RESET = 521;
 
     // Client To Server message types.
     public static final int CTS_CLIENT_READY = 603;
     public static final int CTS_CLIENT_ALIVE = 610;
+    public static final int CTS_CLIENT_RESET = 620;
 
     // Contents of a message passed between players.
     public int type;

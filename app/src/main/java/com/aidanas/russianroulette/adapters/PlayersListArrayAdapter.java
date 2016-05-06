@@ -76,8 +76,8 @@ public class PlayersListArrayAdapter extends ArrayAdapter<Player>{
         Player p = getItem(position);
         ViewHolder viewHolder = (ViewHolder) rowView.getTag();
         viewHolder.nameTw.setText(p.getName());
-        viewHolder.readyIv.setVisibility(p.isReady() ? View.VISIBLE : View.INVISIBLE);
-        viewHolder.aliveIv.setVisibility(p.isAlive() ? View.VISIBLE : View.INVISIBLE);
+        viewHolder.readyIv.setVisibility(p.isReady() ? View.VISIBLE : View.GONE);
+        viewHolder.aliveIv.setVisibility(p.isAlive() ? View.VISIBLE : View.GONE);
 
         return rowView;
     }

@@ -49,7 +49,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
     private static final int GUN_CAPACITY = 6;
 
     // Bullets in the cylinder. Usually 1 :)
-    private static final int BULLETS = 5;
+    private static final int BULLETS = 1;
     // Milliseconds to wait before the trigger is pulled.
     private static final long THRILL_DELAY = 1000;
 
@@ -116,16 +116,43 @@ public class Arbitrator implements BluetoothSocketReceiver{
                 if (Const.DEBUG) Log.v(TAG+"[ANON]", "In run(), Thread = " +
                         Thread.currentThread().getName());
 
-                // Send 'server ready' bluetooth message to all devices in the game.
-                for (BtConnectedThread t: mConnectedThreadMap.values()) {
-                    BtMsg m = new BtMsg();
-                    m.type = mIsServer ? BtMsg.STC_SERVER_READY : BtMsg.CTS_CLIENT_READY;
-                    t.write(m);
+                // Send the ready bluetooth message to all devices in the game.
+                if (mIsServer){
+                    sendToClients(BtMsg.STC_SERVER_READY, null);
+                } else {
+                    sendToMaster(BtMsg.CTS_CLIENT_READY, null);
                 }
 
                 // Is it time to spin the gun yet?
                 if (allReady()){
                     playGame();
+                }
+            }
+        });
+    }
+
+    /**
+     * Method to mark current device as reset. It makes sure the processing get done on a separate
+     * from UI thread.
+     */
+    public void reset() {
+        if (Const.DEBUG) Log.v(TAG, "In reset(), Thread = " + Thread.currentThread().getName());
+
+        // Mrk this player as 'ready'.
+        mIsReady = false;
+
+        // Release the calling thread by delegating further processing to the handlers' thread.
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In run(), Thread = " +
+                        Thread.currentThread().getName());
+
+                // Send the player reset bluetooth message to all devices in the game.
+                if (mIsServer){
+                    sendToClients(BtMsg.STC_SERVER_RESET, null);
+                } else {
+                    sendToMaster(BtMsg.CTS_CLIENT_RESET, null);
                 }
             }
         });
@@ -325,6 +352,23 @@ public class Arbitrator implements BluetoothSocketReceiver{
     }
 
     /**
+     * Method sends messages to all clients indicating that a player has transitioned to reset
+     * state.
+     * @param mac - Address of the player who wants to play another round.
+     */
+    private void notifyClientsPlayerResetByMAC(String mac) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerResetByMAC(), mac = " + mac +
+                "Thread = " + Thread.currentThread().getName());
+
+        Player p = getPlayerByMac(mac);
+        if (p == null){
+            throw new IllegalStateException("Player to be marked as RESET not found! MAC:" + mac);
+        } else {
+            sendToClientsButOne(BtMsg.STC_PLAYER_RESET, p, p);
+        }
+    }
+
+    /**
      * Utility method to construct a BtMsg with given arguments as fields and send it to all clients
      * of this master. Obviously, this should only be called from the master devices.
      * @param type - One of the BtMsg constants indicating type. Used in a switch upon reception.
@@ -403,8 +447,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
         if (p == null){
             throw new IllegalStateException("Player to be marked as READY not found! MAC:" + mac);
         } else {
-            p.setReady();
-            updateUiPlayerList();
+            markPlayerReady(p);
         }
     }
 
@@ -439,10 +482,45 @@ public class Arbitrator implements BluetoothSocketReceiver{
         if (p == null) {
             throw new IllegalStateException("Player to be marked as ALIVE not found! MAC:" + mac);
         } else {
-            p.setAlive();
+            markPlayerAlive(p);
+        }
+    }
+
+    /**
+     * Method marks a player as in 'reset' state. Meaning that it is wishing to play another round
+     * of the game.
+     * @param player - Player which desires to play another round.
+     */
+    private void markPlayerReset(Player player) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerReset(), player = " + player.getName() +
+                ", Thread = " + Thread.currentThread().getName());
+
+        Player p = getMatchingPlayer(player);
+        if (p == null) {
+            throw new IllegalStateException("Player to be marked as RESET not found! Player:" +
+                    player.getName());
+        } else {
+            p.setReset();
             updateUiPlayerList();
         }
     }
+
+    /**
+     * Method marks a player with specified mac as in 'reset' state. Delegates to markPlayerReset()
+     * after the player has been acquired.
+     * @param mac - Address of the Player which desires to play another round.
+     */
+    private void markPlayerResetByMAC(String mac) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerReset(), mac = " + mac +
+                ", Thread = " + Thread.currentThread().getName());
+
+        Player p = getPlayerByMac(mac);
+        if (p == null) {
+            throw new IllegalStateException("Player to be marked as RESET not found! MAC:" + mac);
+        } else {
+            markPlayerReset(p);
+        }
+     }
 
     /**
      * Method to obtain the player with a given mac address.
@@ -637,8 +715,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     break;
 
                 case BtMsg.STC_SERVER_READY:
-                    mMasterPlayer.setReady();
-                    updateUiPlayerList();
+                    markPlayerReady(mMasterPlayer);
                     // Is it time to spin the gun yet?
                     if (allReady()){
                         playGame();
@@ -654,12 +731,19 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     break;
 
                 case BtMsg.STC_SERVER_ALIVE:
-                    mMasterPlayer.setAlive();
-                    updateUiPlayerList();
+                    markPlayerAlive(mMasterPlayer);
                     break;
 
                 case BtMsg.STC_PLAYER_ALIVE:
                     markPlayerAlive((Player)btMsg.payload);
+                    break;
+
+                case BtMsg.STC_SERVER_RESET:
+                    markPlayerReset(mMasterPlayer);
+                    break;
+
+                case BtMsg.STC_PLAYER_RESET:
+                    markPlayerReset((Player)btMsg.payload);
                     break;
 
                 case BtMsg.CTS_CLIENT_READY:
@@ -674,6 +758,12 @@ public class Arbitrator implements BluetoothSocketReceiver{
                 case BtMsg.CTS_CLIENT_ALIVE:
                     markPlayerAliveByMAC(btMsg.srcMAC);
                     notifyClientsPlayerAliveByMAC(btMsg.srcMAC);
+                    break;
+
+                case BtMsg.CTS_CLIENT_RESET:
+                    markPlayerResetByMAC(btMsg.srcMAC);
+                    notifyClientsPlayerResetByMAC(btMsg.srcMAC);
+                    break;
 
                 default:
                     super.handleMessage(inputMessage);

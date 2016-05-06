@@ -23,4 +23,14 @@
         android:src="@drawable/bwguya"
         android:layout_weight="1"
         />
+
+    <ImageView
+        android:id="@+id/list_item_alive_iv"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:scaleType="fitEnd"
+        android:src="@drawable/ic_alive"
+        android:layout_weight="1"
+        />
+
 </LinearLayout>

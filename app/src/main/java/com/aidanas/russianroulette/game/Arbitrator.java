@@ -49,7 +49,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
     private static final int GUN_CAPACITY = 6;
 
     // Bullets in the cylinder. Usually 1 :)
-    private static final int BULLETS = 1;
+    private static final int BULLETS = 5;
     // Milliseconds to wait before the trigger is pulled.
     private static final long THRILL_DELAY = 1000;
 
@@ -269,24 +269,24 @@ public class Arbitrator implements BluetoothSocketReceiver{
     }
 
     /**
-     * Method to notify all clients that one of the players changed their status to 'ready'.
-     * @param player - Player who has changed their status to 'Ready'
+     * Method to notify all clients that one of the players changed their status to 'ready'. The
+     * method uses the MAC address of the player to identify it.
+     * @param mac - Mac address of the Player who has changed their status to 'Ready'
      */
-    private void notifyClientsPlayerReady(Player  player) {
-        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReady(), player = " + player.getName() +
+    private void notifyClientsPlayerReadyByMAC(String  mac) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReadyByMAC(), mac = " + mac +
                 ", Thread = " + Thread.currentThread().getName());
 
-        for (BtConnectedThread t: mConnectedThreadMap.values()) {
-            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
-            if (!addr.equals(player.getAddress())){
-                BtMsg btmsg = new BtMsg(BtMsg.STC_PLAYER_READY, player);
-                t.write(btmsg);
-            }
+        Player p = getPlayerByMac(mac);
+        if (p == null){
+            throw new IllegalStateException("Player to be marked as READY not found! MAC:" + mac);
+        } else {
+            sendToClientsButOne(BtMsg.STC_PLAYER_READY, p, p);
         }
     }
 
     /**
-     * Method sends a message to the server device indicating that this player has played a round of
+     * Method sends messages to all clients indicating that the host has played a round of
      * the game and is yet alive.
      */
     private void notifyClientsServerAlive() {
@@ -294,6 +294,34 @@ public class Arbitrator implements BluetoothSocketReceiver{
                 Thread.currentThread().getName());
 
         sendToClients(BtMsg.STC_SERVER_ALIVE, null);
+    }
+
+    /**
+     * Method sends messages to all clients indicating that the host has played a round of
+     * the game and is yet alive.
+     * @param mac - Adress of the player who has survived the round.
+     */
+    private void notifyClientsPlayerAliveByMAC(String mac) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerAliveByMAC(), mac = " + mac +
+                "Thread = " + Thread.currentThread().getName());
+
+        Player p = getPlayerByMac(mac);
+        if (p == null){
+            throw new IllegalStateException("Player to be marked as ALIVE not found! MAC:" + mac);
+        } else {
+            sendToClientsButOne(BtMsg.STC_PLAYER_ALIVE, p, p);
+        }
+    }
+
+    /**
+     * Method sends a message to the server device indicating that this player has played a round of
+     * the game and is yet alive.
+     */
+    private void notifyServerClientAlive() {
+        if (Const.DEBUG) Log.v(TAG, "In notifyServerClientAlive(), Thread = " +
+                Thread.currentThread().getName());
+
+        sendToMaster(BtMsg.CTS_CLIENT_ALIVE, null);
     }
 
     /**
@@ -310,6 +338,27 @@ public class Arbitrator implements BluetoothSocketReceiver{
 
         for (BtConnectedThread t : mConnectedThreadMap.values()) {
             t.write(btMsg);
+        }
+    }
+
+    /**
+     * Utility method to construct a BtMsg with given arguments as fields and send it to all but one
+     * clients of this master. Obviously, this should only be called from the master devices.
+     * @param type - One of the BtMsg constants indicating type. Used in a switch upon reception.
+     * @param payload - Arbitrary serializable object.
+     * @param player - The player which will be excluded from recipient list of this message.
+     */
+    private void sendToClientsButOne(int type, Object payload, Player player) {
+        if (Const.DEBUG) Log.v(TAG, "In sendToClientsButOne(), type = " + type + ", payload = " +
+                payload + ", Thread = " +Thread.currentThread().getName());
+
+        BtMsg btMsg = new BtMsg(type, payload);
+
+        for (BtConnectedThread t: mConnectedThreadMap.values()) {
+            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
+            if (!addr.equals(player.getAddress())){
+                t.write(btMsg);
+            }
         }
     }
 
@@ -337,32 +386,62 @@ public class Arbitrator implements BluetoothSocketReceiver{
 
         Player player = getMatchingPlayer(p);
         if (player != null){
-            player.setReady(true);
+            player.setReady();
             updateUiPlayerList();
         }
     }
 
     /**
      * Method to mark a player with a given mac address as being 'ready'.
-     * @param playersMAC - The player to be marked as ready.
+     * @param mac - The player to be marked as ready.
      */
-    private void markPlayerReadyByMAC(String playersMAC) {
-        if (Const.DEBUG) Log.v(TAG, "In markPlayerReadyByMAC(), playersMAC = " + playersMAC +
+    private void markPlayerReadyByMAC(String mac) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerReadyByMAC(), mac = " + mac +
                 ", Thread = " + Thread.currentThread().getName());
 
-        Player player = getPlayerByMac(playersMAC);
-        if (player != null){
-            player.setReady(true);
+        Player p = getPlayerByMac(mac);
+        if (p == null){
+            throw new IllegalStateException("Player to be marked as READY not found! MAC:" + mac);
+        } else {
+            p.setReady();
             updateUiPlayerList();
         }
     }
 
     /**
-     * Method marks a player as being in 'alive' state.
-     * @param player -
+     * Method marks a player as being in an 'alive' state.
+     * @param player - Player indicating that it is still alive after a round was played.
      */
     private void markPlayerAlive(Player player) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerAlive(), player = " + player.getName() +
+                ", Thread = " + Thread.currentThread().getName());
 
+        Player p = getMatchingPlayer(player);
+        if (p == null) {
+            throw new IllegalStateException("Player to be marked as ALIVE not found! Player:" +
+                    player.getName());
+        } else {
+            p.setAlive();
+            updateUiPlayerList();
+        }
+    }
+
+    /**
+     * Method marks a player with specified mac address as being in an 'alive' state.
+     * @param mac - Mac address of the player indicating that it is still alive after a round was
+     *            played.
+     */
+    private void markPlayerAliveByMAC(String mac) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerAliveByMAC(), mac = " + mac +
+                ", Thread = " + Thread.currentThread().getName());
+
+        Player p = getPlayerByMac(mac);
+        if (p == null) {
+            throw new IllegalStateException("Player to be marked as ALIVE not found! MAC:" + mac);
+        } else {
+            p.setAlive();
+            updateUiPlayerList();
+        }
     }
 
     /**
@@ -438,6 +517,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
         if (Const.DEBUG) Log.v(TAG, "In updatePlayersList(), players.size() = " + players.size());
 
         mPlayersList.addAll(players);
+        updateUiPlayerList();
     }
 
     /**
@@ -554,11 +634,10 @@ public class Arbitrator implements BluetoothSocketReceiver{
                 case BtMsg.STC_PLAYERS_LIST:
                     List<Player> players = (List<Player>) btMsg.payload;
                     updatePlayersList(players);
-                    updateUiPlayerList();
                     break;
 
                 case BtMsg.STC_SERVER_READY:
-                    mMasterPlayer.setReady(true);
+                    mMasterPlayer.setReady();
                     updateUiPlayerList();
                     // Is it time to spin the gun yet?
                     if (allReady()){
@@ -575,23 +654,32 @@ public class Arbitrator implements BluetoothSocketReceiver{
                     break;
 
                 case BtMsg.STC_SERVER_ALIVE:
-                    markPlayerAlive(mMasterPlayer);
+                    mMasterPlayer.setAlive();
                     updateUiPlayerList();
+                    break;
+
+                case BtMsg.STC_PLAYER_ALIVE:
+                    markPlayerAlive((Player)btMsg.payload);
                     break;
 
                 case BtMsg.CTS_CLIENT_READY:
                     markPlayerReadyByMAC(btMsg.srcMAC);
-                    notifyClientsPlayerReady(getPlayerByMac(btMsg.srcMAC));
+                    notifyClientsPlayerReadyByMAC(btMsg.srcMAC);
                     // Is it time to spin the gun yet?
                     if (allReady()){
                         playGame();
                     }
                     break;
 
+                case BtMsg.CTS_CLIENT_ALIVE:
+                    markPlayerAliveByMAC(btMsg.srcMAC);
+                    notifyClientsPlayerAliveByMAC(btMsg.srcMAC);
+
                 default:
                     super.handleMessage(inputMessage);
             }
         }
     }
+
 
 }

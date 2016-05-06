@@ -1,5 +1,9 @@
 package com.aidanas.russianroulette.game;
 
+import android.util.Log;
+
+import com.aidanas.russianroulette.Const;
+
 import java.security.SecureRandom;
 
 /**
@@ -9,6 +13,9 @@ import java.security.SecureRandom;
  * Class to model the behavior of a gun in a Russian Roulette game.
  */
 public class Gun {
+
+    // Tag, mostly used for logging and debug output.
+    public static final String TAG = Gun.class.getSimpleName();
 
     // How many bullets can this gun hold?
     private int mCapacity = 6;
@@ -53,7 +60,10 @@ public class Gun {
      * Method to model the trigger pull of the gun.
      * @return - Returns true if the shot was live or false if it was empty.
      */
-    public boolean pullTheTrigger(){
+    public boolean pullTheTrigger() {
+        if (Const.DEBUG) Log.v(TAG, "In pullTheTrigger(), hammer@ = " + mHammer +
+                ", bullets = " + mBulletsLoaded);
+
         return mHammer <= mBulletsLoaded;
     }
 }

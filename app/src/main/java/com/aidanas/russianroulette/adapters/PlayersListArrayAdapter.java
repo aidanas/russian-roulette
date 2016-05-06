@@ -42,6 +42,7 @@ public class PlayersListArrayAdapter extends ArrayAdapter<Player>{
     static class ViewHolder {
         public TextView  nameTw;
         public ImageView readyIv;
+        public ImageView aliveIv;
     }
 
     /**
@@ -67,6 +68,7 @@ public class PlayersListArrayAdapter extends ArrayAdapter<Player>{
             ViewHolder viewHolder = new ViewHolder();
             viewHolder.nameTw  = (TextView) rowView.findViewById(R.id.bt_dev_name);
             viewHolder.readyIv = (ImageView) rowView.findViewById(R.id.list_item_ready_iv);
+            viewHolder.aliveIv = (ImageView) rowView.findViewById(R.id.list_item_alive_iv);
             rowView.setTag(viewHolder);
         }
 
@@ -75,6 +77,7 @@ public class PlayersListArrayAdapter extends ArrayAdapter<Player>{
         ViewHolder viewHolder = (ViewHolder) rowView.getTag();
         viewHolder.nameTw.setText(p.getName());
         viewHolder.readyIv.setVisibility(p.isReady() ? View.VISIBLE : View.INVISIBLE);
+        viewHolder.aliveIv.setVisibility(p.isAlive() ? View.VISIBLE : View.INVISIBLE);
 
         return rowView;
     }

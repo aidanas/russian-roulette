@@ -7,7 +7,8 @@ import java.util.Comparator;
  * Created by: Aidanas
  * Created on: 22/04/2016.
  *
- * Class to model a single player in the game. It will be used by the Arbitrator.
+ * Class to model a single player in the game. It will be used by the Arbitrator. The player is
+ * modeled as FSM with the four distinct states specified as enum values.
  */
 public class Player implements Serializable{
 
@@ -16,9 +17,7 @@ public class Player implements Serializable{
 
     private final String mAddress;
 
-    private boolean mIsReady = false;
-
-    private boolean
+    private State mState = State.NOT_READY;
 
     /**
      * Constructor
@@ -42,11 +41,27 @@ public class Player implements Serializable{
     }
 
     public boolean isReady(){
-        return mIsReady;
+        return mState == State.READY;
     }
 
-    public void setReady(boolean isReady){
-        mIsReady = isReady;
+    public boolean isAlive() {
+        return mState == State.ALIVE;
+    }
+
+    public void setReady(){
+        if (!(mState == State.NOT_READY)){
+            throw new IllegalStateException("Players can transition to READY state only from " +
+                    "READY state!");
+        }
+        mState = State.READY;
+    }
+
+    public void setAlive() {
+        if (!(mState == State.READY)){
+            throw new IllegalStateException("Players can transition to ALIVE state only from " +
+                    "READY state!");
+        }
+        mState = State.ALIVE;
     }
 
     /***********************************************************************************************

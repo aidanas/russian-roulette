@@ -18,6 +18,8 @@ public class Player implements Serializable{
 
     private boolean mIsReady = false;
 
+    private boolean
+
     /**
      * Constructor
      * @param name - Name of the player.
@@ -60,5 +62,15 @@ public class Player implements Serializable{
         public int compare(Player lhs, Player rhs) {
             return lhs.getName().compareTo(rhs.getName());
         }
+    }
+
+    /**
+     * Possible states of a player.
+     */
+    public enum State{
+        NOT_READY,
+        READY,
+        ALIVE,
+        DEAD,
     }
 }

@@ -17,13 +17,12 @@ public class BtMsg implements Serializable{
     public static final int SLAVE_CONNECTION_FAIL = 11;
     public static final int CONNECTED_SLAVE_SOCKET = 12;
 
-    public static final int BT_MESSAGE_READ = 30;
-
     // Server To Client message types.
     public static final int STC_NEW_PLAYER   = 501;
     public static final int STC_PLAYERS_LIST = 502;
     public static final int STC_SERVER_READY = 503;
     public static final int STC_PLAYER_READY = 504;
+    public static final int STC_SERVER_ALIVE = 510;
 
     // Client To Server message types.
     public static final int CTS_CLIENT_READY = 603;
@@ -32,6 +31,25 @@ public class BtMsg implements Serializable{
     public int type;
     public Object payload; // Must be cast to the expected object type upon reception.
 
+    // This filed gets added at the receiving end of the transmission.
     public String srcMAC;
+
+    /**
+     * No param constructor.
+     */
+    public BtMsg(){
+        // Fields might be assigned directly at a later time if needed be.
+    }
+
+    /**
+     * Courtesy constructor (fields are public) to initialise fields.
+     * @param type - Type of the message. Must be one of static fields of this class. Used in
+     *             switching block upon reception.
+     * @param payload - Arbitrary serializable object. Must be cast back upon reception.
+     */
+    public BtMsg(int type, Object payload){
+        this.type = type;
+        this.payload = payload;
+    }
 
 }

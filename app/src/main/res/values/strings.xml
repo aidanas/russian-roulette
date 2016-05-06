@@ -11,4 +11,7 @@
     <string name="no_bt_dialog_msg">The device appears NOT to have a Bluetooth adapter! The game will only be playable as a single player game!</string>
     <string name="waiting_for_others">Waiting for other players...</string>
     <string name="players">Players:</string>
+    <string name="get_ready">Get Ready!</string>
+    <string name="click">Click!</string>
+    <string name="another_round">Another Round!</string>
 </resources>

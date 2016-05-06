@@ -21,7 +21,6 @@ import android.widget.TextView;
 import com.aidanas.russianroulette.Const;
 import com.aidanas.russianroulette.R;
 import com.aidanas.russianroulette.adapters.PlayersListArrayAdapter;
-import com.aidanas.russianroulette.communication.BtMsg;
 import com.aidanas.russianroulette.game.Arbitrator;
 import com.aidanas.russianroulette.game.Player;
 import com.aidanas.russianroulette.services.GameService;
@@ -61,6 +60,7 @@ public class PlayingActivityClient extends Activity {
     // Views
     private ListView mPlayersLw;
     private Button mReadyBtn;
+    private Button mAnotherBtn;
     private ImageView mGuyIv;
     private TextView mTitleTv;
 
@@ -80,9 +80,10 @@ public class PlayingActivityClient extends Activity {
         // Get the mac address of the hosting device.
         mastersMac = getIntent().getExtras().getString(SelectHostActivity.HOST_MAC_ADDR);
 
-        mTitleTv  = (TextView) findViewById(R.id.ac_playing_title_tv);
-        mReadyBtn = (Button) findViewById(R.id.ac_playing_ready_btn);
-        mGuyIv    = (ImageView) findViewById(R.id.ac_playing_guy_iv);
+        mTitleTv    = (TextView) findViewById(R.id.ac_playing_title_tv);
+        mReadyBtn   = (Button) findViewById(R.id.ac_playing_ready_btn);
+        mAnotherBtn = (Button) findViewById(R.id.ac_playing_another_btn);
+        mGuyIv      = (ImageView) findViewById(R.id.ac_playing_guy_iv);
 
         /*
          * When "I'm Ready" is pressed mark the players as ready. This involves notifying the
@@ -102,6 +103,20 @@ public class PlayingActivityClient extends Activity {
             }
         });
 
+        /*
+         * This button will only be shown if the players survives a round. It allows the user to
+         * request another round of the game.
+         */
+        mAnotherBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In onClick() mAnotherBtn.");
+
+                // TODO: 06/05/2016 to be specified.
+            }
+        });
+
+        // Configure the list displaying players.
         mPlayersLw = (ListView) findViewById(R.id.ac_playing_players_lw);
         mArrayAdapter = new PlayersListArrayAdapter(this, R.layout.player_list_item,
                 new ArrayList<Player>());
@@ -168,13 +183,15 @@ public class PlayingActivityClient extends Activity {
              * Main switching block.
              */
             switch (msg.what) {
-                case BtMsg.BT_MESSAGE_READ:
-                    // TODO: 02/05/2016 handle msg!
-                    break;
 
-                case Arbitrator.UPDATE_PLAYER_LIST:
+                case Arbitrator.MSG_UI_UPDATE_PLAYER_LIST:
                     updatePlayerList((List<Player>) msg.obj);
                     break;
+
+                case Arbitrator.MSG_UI_ALL_READY:
+                    mTitleTv.setText(R.string.playing);
+                    break;
+
                 default:
                     super.handleMessage(msg);
             }

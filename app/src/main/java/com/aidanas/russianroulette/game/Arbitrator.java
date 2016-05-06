@@ -39,7 +39,19 @@ public class Arbitrator implements BluetoothSocketReceiver{
     // Tag, mostly used for logging and debug output.
     public static final String TAG = BtMasterThread.class.getSimpleName();
 
-    public static final int UPDATE_PLAYER_LIST = 40;
+    // Message types passed to the main thread to update UI elements.
+    public static final int MSG_UI_UPDATE_PLAYER_LIST = 40;
+    public static final int MSG_UI_ALL_READY = 41;
+    public static final int MSG_UI_ALIVE = 42;
+    public static final int MSG_UI_DEAD = 43;
+
+    // How many bullets a gun CAN have?
+    private static final int GUN_CAPACITY = 6;
+
+    // Bullets in the cylinder. Usually 1 :)
+    private static final int BULLETS = 1;
+    // Milliseconds to wait before the trigger is pulled.
+    private static final long THRILL_DELAY = 1000;
 
     // Flag to be set for the device acting as a server of the game.
     private final boolean mIsServer;
@@ -50,7 +62,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
      */
     private volatile boolean mIsReady = false;
 
-    // Players of interest.
+    // Master player and is socket (remains null if this device is the master).
     private Player mMasterPlayer;
 
     // To communicate with activity.
@@ -112,7 +124,7 @@ public class Arbitrator implements BluetoothSocketReceiver{
                 }
 
                 // Is it time to spin the gun yet?
-                if (mIsServer && allReady()){
+                if (allReady()){
                     playGame();
                 }
             }
@@ -139,13 +151,56 @@ public class Arbitrator implements BluetoothSocketReceiver{
     }
 
     /**
-     * This method contains the game logic.
+     * This method contains the logic of a russian roulette game.
+     * All devices must be in 'ready' mode before calling this method!
      */
     private void playGame() {
-        if (Const.DEBUG) Log.v(TAG, "In allReady(), Thread = " +
-                Thread.currentThread().getName());
+        if (Const.DEBUG) Log.v(TAG, "In playGame(), Thread = " + Thread.currentThread().getName());
+
+        // Change title of the activity to "Playing...".
+        postToUiHandler(MSG_UI_ALL_READY, null);
+
+        Gun gun = new Gun(GUN_CAPACITY);
+        gun.loadBullets(BULLETS);
+        gun.spinCylinder();
+
+        try {
+            Thread.sleep(THRILL_DELAY);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // The moment of truth.
+        if (gun.pullTheTrigger()){
+            dead();
+        } else {
+            alive();
+        }
     }
 
+    /**
+     * Method gets called if the player lost the game.
+     */
+    private void dead() {
+        if (Const.DEBUG) Log.v(TAG, "In dead(), Thread = " + Thread.currentThread().getName());
+
+    }
+
+    /**
+     * Method gets called if this player remained alive after a round of the game.
+     */
+    private void alive() {
+        if (Const.DEBUG) Log.v(TAG, "In alive(), Thread = " + Thread.currentThread().getName());
+
+        postToUiHandler(MSG_UI_ALIVE, null);
+
+        // Inform others about the outcome of your game.
+        if (mIsServer){
+            notifyClientsServerAlive();
+        } else {
+            notifyServerClientAlive();
+        }
+    }
 
     /**
      * Method to process a newly come device.
@@ -157,20 +212,33 @@ public class Arbitrator implements BluetoothSocketReceiver{
         // If running as the host then update UI and inform other clients.
         if (mIsServer){
             mConnectedSockets.add(bluetoothSocket);
-            Player p = playersFromSocket(bluetoothSocket);
+            Player p = makePlayerFromSocket(bluetoothSocket);
             mPlayersList.add(p);
-            updateUIPlayerList();
+            updateUiPlayerList();
             notifyClientsNewPlayer(p);
-            notifyNewPlayerCurrentAboutPlayers(p);
+            notifyNewPlayerAboutCurrentPlayers(p);
         }
+    }
+
+    /**
+     * Utility method to instantiate and initialise a player object from a given bluetooth socket.
+     * @param bluetoothSocket - Conected Bluetooth socket.
+     * @return - Player object.
+     */
+    private Player makePlayerFromSocket(BluetoothSocket bluetoothSocket) {
+        if (Const.DEBUG) Log.v(TAG, "In makePlayerFromSocket(), socket = "+
+                bluetoothSocket.getRemoteDevice().getName());
+
+        return new Player(bluetoothSocket.getRemoteDevice().getName(),
+                bluetoothSocket.getRemoteDevice().getAddress());
     }
 
     /**
      * Method to send a list of current players to the newly arrived player.
      * @param p - Newly arrived player which should be provides with a list of current players.
      */
-    private void notifyNewPlayerCurrentAboutPlayers(Player p) {
-        if (Const.DEBUG) Log.v(TAG, "In notifyNewPlayerCurrentAboutPlayers(), player = " +
+    private void notifyNewPlayerAboutCurrentPlayers(Player p) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyNewPlayerAboutCurrentPlayers(), player = " +
                 p.getName());
 
         // List should contain all but the receiving players.
@@ -180,22 +248,121 @@ public class Arbitrator implements BluetoothSocketReceiver{
         }
 
         // Construct and send the message.
-        BtMsg btMsg = new BtMsg();
-        btMsg.type = BtMsg.STC_PLAYERS_LIST;
-        btMsg.payload = players;
+        BtMsg btMsg = new BtMsg(BtMsg.STC_PLAYERS_LIST, players);
         mConnectedThreadMap.get(p.getAddress()).write(btMsg);
     }
 
     /**
-     * Utility method to instantiate and initialise a player object from a given bluetooth socket.
-     * @param bluetoothSocket - Conected Bluetooth socket.
-     * @return - Player object.
+     * Method to inform all clients that a new player has arrived.
+     * @param player - New player.
      */
-    private Player playersFromSocket(BluetoothSocket bluetoothSocket) {
-        if (Const.DEBUG) Log.v(TAG, "In playersFromSocket()");
+    private void notifyClientsNewPlayer(Player player) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsNewPlayer(), player = " + player.getName());
 
-        return new Player(bluetoothSocket.getRemoteDevice().getName(),
-                bluetoothSocket.getRemoteDevice().getAddress());
+        for (BtConnectedThread t: mConnectedThreadMap.values()) {
+            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
+            if (!addr.equals(player.getAddress())){
+                BtMsg btmsg = new BtMsg(BtMsg.STC_NEW_PLAYER, player);
+                t.write(btmsg);
+            }
+        }
+    }
+
+    /**
+     * Method to notify all clients that one of the players changed their status to 'ready'.
+     * @param player - Player who has changed their status to 'Ready'
+     */
+    private void notifyClientsPlayerReady(Player  player) {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReady(), player = " + player.getName() +
+                ", Thread = " + Thread.currentThread().getName());
+
+        for (BtConnectedThread t: mConnectedThreadMap.values()) {
+            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
+            if (!addr.equals(player.getAddress())){
+                BtMsg btmsg = new BtMsg(BtMsg.STC_PLAYER_READY, player);
+                t.write(btmsg);
+            }
+        }
+    }
+
+    /**
+     * Method sends a message to the server device indicating that this player has played a round of
+     * the game and is yet alive.
+     */
+    private void notifyClientsServerAlive() {
+        if (Const.DEBUG) Log.v(TAG, "In notifyClientsServerAlive(), Thread = " +
+                Thread.currentThread().getName());
+
+        sendToClients(BtMsg.STC_SERVER_ALIVE, null);
+    }
+
+    /**
+     * Utility method to construct a BtMsg with given arguments as fields and send it to all clients
+     * of this master. Obviously, this should only be called from the master devices.
+     * @param type - One of the BtMsg constants indicating type. Used in a switch upon reception.
+     * @param payload - Arbitrary serializable object.
+     */
+    private void sendToClients(int type, Object payload) {
+        if (Const.DEBUG) Log.v(TAG, "In sendToClients(), type = " + type + ", payload = " +
+                payload + ", Thread = " +Thread.currentThread().getName());
+
+        BtMsg btMsg = new BtMsg(type, payload);
+
+        for (BtConnectedThread t : mConnectedThreadMap.values()) {
+            t.write(btMsg);
+        }
+    }
+
+    /**
+     * Utility method to construct a BtMsg with given arguments as fields and send it to the master
+     * device.
+     * @param type - One of the BtMsg constants indicating type. Used in a switch upon reception.
+     * @param payload - Arbitrary serializable object.
+     */
+    private void sendToMaster(int type, Object payload){
+        if (Const.DEBUG) Log.v(TAG, "In sendToMaster(), type = " + type + ", payload = " + payload +
+                ", Thread = " +Thread.currentThread().getName());
+
+        BtMsg btMsg = new BtMsg(type, payload);
+        mConnectedThreadMap.get(mMasterPlayer.getAddress()).write(btMsg);
+    }
+
+    /**
+     * Method to mark a player as being 'ready'.
+     * @param p - The player to be marked as ready.
+     */
+    private void markPlayerReady(Player p) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerReady(), player = " + p.getName() +
+                ", Thread = " + Thread.currentThread().getName());
+
+        Player player = getMatchingPlayer(p);
+        if (player != null){
+            player.setReady(true);
+            updateUiPlayerList();
+        }
+    }
+
+    /**
+     * Method to mark a player with a given mac address as being 'ready'.
+     * @param playersMAC - The player to be marked as ready.
+     */
+    private void markPlayerReadyByMAC(String playersMAC) {
+        if (Const.DEBUG) Log.v(TAG, "In markPlayerReadyByMAC(), playersMAC = " + playersMAC +
+                ", Thread = " + Thread.currentThread().getName());
+
+        Player player = getPlayerByMac(playersMAC);
+        if (player != null){
+            player.setReady(true);
+            updateUiPlayerList();
+        }
+    }
+
+    /**
+     * Method marks a player as being in 'alive' state.
+     * @param player -
+     */
+    private void markPlayerAlive(Player player) {
+
     }
 
     /**
@@ -213,73 +380,6 @@ public class Arbitrator implements BluetoothSocketReceiver{
             }
         }
         return null;
-    }
-
-    /**
-     * Method to inform all clients that a new player has arrived.
-     * @param player - New player.
-     */
-    private void notifyClientsNewPlayer(Player player) {
-        if (Const.DEBUG) Log.v(TAG, "In notifyClientsNewPlayer(), player = " + player.getName());
-
-        for (BtConnectedThread t: mConnectedThreadMap.values()) {
-            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
-            if (!addr.equals(player.getAddress())){
-                BtMsg btmsg = new BtMsg();
-                btmsg.type = BtMsg.STC_NEW_PLAYER;
-                btmsg.payload = player;
-                t.write(btmsg);
-            }
-        }
-    }
-
-    /**
-     * Method to notify all clients that one of the players changed their status to 'ready'.
-     * @param player - Player who has changed their status to 'Ready'
-     */
-    private void notifyClientsPlayerReady(Player  player) {
-        if (Const.DEBUG) Log.v(TAG, "In notifyClientsPlayerReady(), player = " + player.getName() +
-                ", Thread = " + Thread.currentThread().getName());
-
-        for (BtConnectedThread t: mConnectedThreadMap.values()) {
-            String addr = t.getBluetoothSocket().getRemoteDevice().getAddress();
-            if (!addr.equals(player.getAddress())){ // TODO: 05/05/2016 Implement get player by mac method.
-                BtMsg btmsg = new BtMsg();
-                btmsg.type = BtMsg.STC_PLAYER_READY;
-                btmsg.payload = player;
-                t.write(btmsg);
-            }
-        }
-    }
-
-    /**
-     * Method to mark a player as being 'ready'.
-     * @param p - The player to be marked as ready.
-     */
-    private void markPlayerReady(Player p) {
-        if (Const.DEBUG) Log.v(TAG, "In markPlayerReady(), player = " + p.getName() +
-                ", Thread = " + Thread.currentThread().getName());
-
-        Player player = getMatchingPlayer(p);
-        if (player != null){
-            player.setReady(true);
-            updateUIPlayerList();
-        }
-    }
-
-    /**
-     * Method to mark a player with a given mac address as being 'ready'.
-     * @param playersMAC - The player to be marked as ready.
-     */
-    private void markPlayerMACReady(String playersMAC) {
-        if (Const.DEBUG) Log.v(TAG, "In markPlayerMACReady(), playersMAC = " + playersMAC +
-                ", Thread = " + Thread.currentThread().getName());
-
-        Player player = getPlayerByMac(playersMAC);
-        if (player != null){
-            player.setReady(true);
-            updateUIPlayerList();
-        }
     }
 
     /**
@@ -303,12 +403,24 @@ public class Arbitrator implements BluetoothSocketReceiver{
     /**
      * Method to update player list on the UI.
      */
-    private void updateUIPlayerList() {
-        if (Const.DEBUG) Log.v(TAG, "In updateUIPlayerList()");
+    private void updateUiPlayerList() {
+        if (Const.DEBUG) Log.v(TAG, "In updateUiPlayerList()");
+
+        postToUiHandler(MSG_UI_UPDATE_PLAYER_LIST, mPlayersList);
+    }
+
+    /**
+     * Utility method to enqueue a message onto the main thread's looper.
+     * @param what - Type of the message.
+     * @param obj - Arbitrary object to be delivered to the main thread.
+     */
+    private void postToUiHandler(int what, Object obj){
+        if (Const.DEBUG) Log.v(TAG, "In postToUiHandler(), what = " + what + ", obj = " + obj +
+                ", Thread = " + Thread.currentThread().getName());
 
         Message m = Message.obtain();
-        m.what    = UPDATE_PLAYER_LIST;
-        m.obj     = mPlayersList;
+        m.what    = what;
+        m.obj     = obj;
         try {
             mMessenger.send(m);
         } catch (RemoteException e) {
@@ -393,8 +505,8 @@ public class Arbitrator implements BluetoothSocketReceiver{
         if (mIsServer){
             newPlayer(bluetoothSocket);
         } else {
-            mPlayersList.add(mMasterPlayer = playersFromSocket(bluetoothSocket));
-            updateUIPlayerList();
+            mPlayersList.add(mMasterPlayer = makePlayerFromSocket(bluetoothSocket));
+            updateUiPlayerList();
         }
     }
 
@@ -436,27 +548,44 @@ public class Arbitrator implements BluetoothSocketReceiver{
 
                 case BtMsg.STC_NEW_PLAYER:
                     mPlayersList.add((Player)btMsg.payload);
-                    updateUIPlayerList();
+                    updateUiPlayerList();
                     break;
 
                 case BtMsg.STC_PLAYERS_LIST:
                     List<Player> players = (List<Player>) btMsg.payload;
                     updatePlayersList(players);
-                    updateUIPlayerList();
+                    updateUiPlayerList();
                     break;
 
                 case BtMsg.STC_SERVER_READY:
                     mMasterPlayer.setReady(true);
-                    updateUIPlayerList();
+                    updateUiPlayerList();
+                    // Is it time to spin the gun yet?
+                    if (allReady()){
+                        playGame();
+                    }
                     break;
 
                 case BtMsg.STC_PLAYER_READY:
                     markPlayerReady((Player)btMsg.payload);
+                    // Is it time to spin the gun yet?
+                    if (allReady()){
+                        playGame();
+                    }
+                    break;
+
+                case BtMsg.STC_SERVER_ALIVE:
+                    markPlayerAlive(mMasterPlayer);
+                    updateUiPlayerList();
                     break;
 
                 case BtMsg.CTS_CLIENT_READY:
-                    markPlayerMACReady(btMsg.srcMAC);
+                    markPlayerReadyByMAC(btMsg.srcMAC);
                     notifyClientsPlayerReady(getPlayerByMac(btMsg.srcMAC));
+                    // Is it time to spin the gun yet?
+                    if (allReady()){
+                        playGame();
+                    }
                     break;
 
                 default:
@@ -464,4 +593,5 @@ public class Arbitrator implements BluetoothSocketReceiver{
             }
         }
     }
+
 }

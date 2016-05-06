@@ -23,11 +23,12 @@
         <TextView
             android:id="@+id/ac_playing_title_tv"
             style="@style/TitleTextViewStyle"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerHorizontal="true"
             android:layout_centerVertical="true"
-            android:text="@string/playing" />
+            android:gravity="center"
+            android:text="@string/get_ready" />
 
         <TextView
             style="@style/PlayersListHeadingTv"
@@ -69,6 +70,13 @@
             android:layout_marginBottom="10dp"
             android:enabled="false"
             android:text="@string/i_m_ready"/>
+
+        <Button
+            android:id="@+id/ac_playing_another_btn"
+            style="@style/BigBtnStyle"
+            android:layout_marginBottom="10dp"
+            android:visibility="gone"
+            android:text="@string/another_round"/>
 
         <ImageView
             android:id="@+id/ac_playing_guy_iv"

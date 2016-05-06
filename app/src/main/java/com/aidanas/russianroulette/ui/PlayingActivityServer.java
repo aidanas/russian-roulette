@@ -21,7 +21,6 @@ import android.widget.TextView;
 import com.aidanas.russianroulette.Const;
 import com.aidanas.russianroulette.R;
 import com.aidanas.russianroulette.adapters.PlayersListArrayAdapter;
-import com.aidanas.russianroulette.communication.BtMsg;
 import com.aidanas.russianroulette.game.Arbitrator;
 import com.aidanas.russianroulette.game.Player;
 import com.aidanas.russianroulette.services.GameService;
@@ -44,7 +43,6 @@ public class PlayingActivityServer extends Activity {
     // Key to access a Intent extras passed to the game service.
     public static final String MESSENGER = "messenger";
     public static final String IS_SERVER = "start as server?";
-    public static final String MASTERS_MAC = "mac address of the master";
 
     // Custom handler to handle messages coming from other threads.
     private final Handler mHandler = new MainHandler(Looper.getMainLooper());
@@ -62,6 +60,7 @@ public class PlayingActivityServer extends Activity {
     // Views
     private ListView mPlayersLw;
     private Button mReadyBtn;
+    private Button mAnotherBtn;
     private ImageView mGuyIv;
     private TextView mTitleTv;
 
@@ -75,9 +74,10 @@ public class PlayingActivityServer extends Activity {
 
         setContentView(R.layout.activity_playing);
 
-        mTitleTv  = (TextView) findViewById(R.id.ac_playing_title_tv);
-        mReadyBtn = (Button) findViewById(R.id.ac_playing_ready_btn);
-        mGuyIv    = (ImageView) findViewById(R.id.ac_playing_guy_iv);
+        mTitleTv    = (TextView) findViewById(R.id.ac_playing_title_tv);
+        mReadyBtn   = (Button) findViewById(R.id.ac_playing_ready_btn);
+        mAnotherBtn = (Button) findViewById(R.id.ac_playing_another_btn);
+        mGuyIv      = (ImageView) findViewById(R.id.ac_playing_guy_iv);
 
         /*
          * When "I'm Ready" is pressed mark the players as ready. This involves notifying the
@@ -87,7 +87,7 @@ public class PlayingActivityServer extends Activity {
         mReadyBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In onClick()");
+                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In onClick() mReadyBtn.");
 
                 // Hide the button and display the image...
                 mReadyBtn.setVisibility(View.GONE);
@@ -97,6 +97,20 @@ public class PlayingActivityServer extends Activity {
             }
         });
 
+        /*
+         * This button will only be shown if the players survives a round. It allows the user to
+         * request another round of the game.
+         */
+        mAnotherBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (Const.DEBUG) Log.v(TAG+"[ANON]", "In onClick() mAnotherBtn.");
+
+                // TODO: 06/05/2016 to be specified.
+            }
+        });
+
+        // Configure the list displaying players.
         mPlayersLw = (ListView) findViewById(R.id.ac_playing_players_lw);
         mArrayAdapter = new PlayersListArrayAdapter(this, R.layout.player_list_item,
                 new ArrayList<Player>());
@@ -131,11 +145,6 @@ public class PlayingActivityServer extends Activity {
         Intent intent = new Intent(this, GameService.class);
         intent.putExtra(MESSENGER, mMessenger);
         intent.putExtra(IS_SERVER, isServer);
-
-        // TODO: 22/04/2016 Remove after DEBUGGING is completed! HARDCODED MAC!
-        if (!isServer){
-            intent.putExtra(MASTERS_MAC, "BC:CF:CC:F9:8C:9C");
-        }
 
         startService(intent);
     }
@@ -176,13 +185,18 @@ public class PlayingActivityServer extends Activity {
              * Main switching block.
              */
             switch (msg.what) {
-                case BtMsg.BT_MESSAGE_READ:
-                    // TODO: 02/05/2016 handle msg!
-                    break;
 
-                case Arbitrator.UPDATE_PLAYER_LIST:
+                case Arbitrator.MSG_UI_UPDATE_PLAYER_LIST:
                     updatePlayerList((List<Player>) msg.obj);
                     break;
+
+                case Arbitrator.MSG_UI_ALL_READY:
+                    mTitleTv.setText(R.string.playing);
+                    break;
+
+                case Arbitrator.MSG_UI_ALIVE:
+                    mTitleTv.setText(R.string.click);
+
 
                 default:
                     super.handleMessage(msg);
